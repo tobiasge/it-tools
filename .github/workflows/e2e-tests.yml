@@ -26,6 +26,11 @@ jobs:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
 
       - run: corepack enable
+      - name: Start Playwright container
+        run: |
+          CONT_ID=$(docker create -p 3000:3000 -it --rm --init --workdir /home/pwuser --user pwuser mcr.microsoft.com/playwright:v1.55.0-noble npx -y playwright@1.55.0 run-server --port 3000 --host 0.0.0.0)
+          docker start $CONT_ID
+          echo "CONT_ID=$CONT_ID" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v3
         with:
@@ -40,3 +45,8 @@ jobs:
 
       - name: Run Playwright tests
         run: pnpm run test:e2e --shard=${{ matrix.shard }}
+        env:
+          PW_TEST_CONNECT_WS_ENDPOINT: "ws://127.0.0.1:3000/"
+      - name: Sop Playwright container
+        run: |
+          docker stop $CONT_ID
