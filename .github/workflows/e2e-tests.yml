@@ -15,6 +15,15 @@ jobs:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
 
       - run: corepack enable
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(jq -r .dependencies.playwright package.json)" >> "$GITHUB_OUTPUT"
       - name: Start Playwright container
         run: |
           CONTAINER_ID=$(docker create \
@@ -24,16 +33,13 @@ jobs:
                            --init \
                            --workdir /home/pwuser \
                            --user pwuser \
-                           mcr.microsoft.com/playwright:v1.55.0-noble \
-                           npx -y playwright@1.55.0 run-server --port 3000 --host 0.0.0.0 \
+                           mcr.microsoft.com/playwright:v$PLAYWRIGHT_VERSION-noble \
+                           npx -y playwright@$PLAYWRIGHT_VERSION run-server --port 3000 --host 0.0.0.0 \
                         )
           docker start $CONTAINER_ID
           echo "CONTAINER_ID=$CONTAINER_ID" >> "$GITHUB_ENV"
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'pnpm'
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}
 
       - name: Install dependencies
         run: pnpm install
